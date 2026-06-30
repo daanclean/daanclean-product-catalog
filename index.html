@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>2026 Product Catalogue</title>
+  <title>2026.6.30 Product Catalogue</title>
   <style>
     :root {
       --ink: #202124;
@@ -169,6 +169,30 @@
       font-size: 12px;
       font-weight: 760;
       padding-top: 9px;
+    }
+    .category-toggle {
+      display: none;
+      width: 100%;
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      font: inherit;
+      font-size: 14px;
+      font-weight: 720;
+      padding: 0 12px;
+      text-align: left;
+      cursor: pointer;
+    }
+    .category-toggle::after {
+      content: "+";
+      float: right;
+      color: var(--accent);
+      font-weight: 800;
+    }
+    .nav-row.open .category-toggle::after {
+      content: "-";
     }
     .category-menu {
       display: flex;
@@ -515,7 +539,7 @@
     .sprite-photo {
       width: 88%;
       height: 88%;
-      background-image: var(--sprite);
+      background-image: var(--sprite, none);
       background-repeat: no-repeat;
       background-size: calc(var(--cols) * 100%) calc(var(--rows) * 100%);
       background-position:
@@ -642,7 +666,18 @@
         gap: 7px;
       }
       .nav-label {
-        padding-top: 0;
+        display: none;
+      }
+      .category-toggle {
+        display: block;
+      }
+      .category-menu {
+        display: none;
+        padding-top: 6px;
+      }
+      .nav-row.open .category-menu {
+        display: flex;
+      }
       }
       .search {
         width: 100%;
@@ -707,7 +742,7 @@
         <img src="daan-clean-logo.webp" alt="DAAN CLEAN logo" />
       </a>
       <div>
-        <h1>2026 Product Catalogue</h1>
+        <h1>2026.6.30 Product Catalogue</h1>
         <div class="count"><span id="visibleCount">270</span><span id="countSuffix"> / 270 products</span></div>
         <div id="activeFilter" class="active-filter">All categories</div>
       </div>
@@ -730,6 +765,7 @@
     </div>
     <div class="nav-row">
       <span class="nav-label">Category</span>
+      <button id="categoryToggle" class="category-toggle" type="button" aria-expanded="false">Category</button>
       <nav id="categoryMenu" class="category-menu" aria-label="Product categories"></nav>
     </div>
   </header>
@@ -902,8 +938,11 @@
     const visibleCount = document.getElementById("visibleCount");
     const countSuffix = document.getElementById("countSuffix");
     const categoryMenu = document.getElementById("categoryMenu");
+    const categoryToggle = document.getElementById("categoryToggle");
+    const navRow = document.querySelector(".nav-row");
     const activeFilter = document.getElementById("activeFilter");
     const factoryContent = document.getElementById("factoryContent");
+    let spriteObserver;
 
     const fields = [
       ["Net Weight", "Net Weight"],
@@ -990,8 +1029,35 @@
         button.addEventListener("click", () => {
           state.category = button.dataset.primary;
           state.secondary = button.dataset.secondary || "";
+          if (window.matchMedia("(max-width: 720px)").matches) {
+            navRow.classList.remove("open");
+            categoryToggle.setAttribute("aria-expanded", "false");
+          }
           render();
         });
+      });
+    }
+
+    function observeSprites() {
+      if (spriteObserver) spriteObserver.disconnect();
+      const loadSprite = element => {
+        if (!element.dataset.sprite) return;
+        element.style.setProperty("--sprite", `url('${element.dataset.sprite}')`);
+        delete element.dataset.sprite;
+      };
+      if (!("IntersectionObserver" in window)) {
+        document.querySelectorAll(".sprite-photo[data-sprite]").forEach(loadSprite);
+        return;
+      }
+      spriteObserver = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          if (!entry.isIntersecting) return;
+          loadSprite(entry.target);
+          spriteObserver.unobserve(entry.target);
+        });
+      }, { rootMargin: "420px 0px" });
+      document.querySelectorAll(".sprite-photo[data-sprite]").forEach(element => {
+        spriteObserver.observe(element);
       });
     }
 
@@ -1008,7 +1074,7 @@
         .join("");
       return `<article class="card">
         <div class="photo">${sprite
-          ? `<div class="sprite-photo" role="img" aria-label="${escapeHtml(product["Product Name"] || product.SKU)}" style="--sprite:url('${escapeHtml(sprite.sprite)}');--col:${sprite.col};--row:${sprite.row};--cols:${sprite.cols};--rows:${sprite.rows};"></div>`
+          ? `<div class="sprite-photo" role="img" aria-label="${escapeHtml(product["Product Name"] || product.SKU)}" data-sprite="${escapeHtml(sprite.sprite)}" style="--col:${sprite.col};--row:${sprite.row};--cols:${sprite.cols};--rows:${sprite.rows};"></div>`
           : image ? `<img loading="lazy" src="${escapeHtml(image)}" alt="${escapeHtml(product["Product Name"])}">` : '<span class="no-photo">No image</span>'}</div>
         <div class="body">
           <div class="sku">${escapeHtml(product.SKU)}</div>
@@ -1041,6 +1107,7 @@
       } else {
         const items = filteredProducts();
         grid.innerHTML = items.map(card).join("");
+        observeSprites();
         visibleCount.textContent = items.length;
         countSuffix.textContent = ` / ${products.length} products`;
         empty.style.display = items.length ? "none" : "block";
@@ -1053,6 +1120,10 @@
     document.getElementById("search").addEventListener("input", event => {
       state.query = event.target.value.trim();
       render();
+    });
+    categoryToggle.addEventListener("click", () => {
+      const isOpen = navRow.classList.toggle("open");
+      categoryToggle.setAttribute("aria-expanded", String(isOpen));
     });
     document.querySelectorAll(".download-options a").forEach(link => {
       link.addEventListener("click", async event => {
