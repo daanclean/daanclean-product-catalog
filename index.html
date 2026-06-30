@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>2026.6.30 Product Catalogue</title>
+  <link rel="preload" href="product-sprite-1.webp" as="image" type="image/webp" />
   <style>
     :root {
       --ink: #202124;
@@ -545,6 +546,11 @@
       background-position:
         calc(var(--col) * -100%)
         calc(var(--row) * -100%);
+      opacity: 0;
+      transition: opacity .18s ease;
+    }
+    .sprite-photo.is-loaded {
+      opacity: 1;
     }
     .no-photo {
       color: var(--muted);
@@ -1044,7 +1050,14 @@
         if (!element.dataset.sprite) return;
         element.style.setProperty("--sprite", `url('${element.dataset.sprite}')`);
         delete element.dataset.sprite;
+        element.classList.add("is-loaded");
       };
+      document.querySelectorAll(".sprite-photo[data-sprite]").forEach((element, index) => {
+        const sprite = element.dataset.sprite;
+        if (index < 28 || sprite === "product-sprite-1.webp") {
+          loadSprite(element);
+        }
+      });
       if (!("IntersectionObserver" in window)) {
         document.querySelectorAll(".sprite-photo[data-sprite]").forEach(loadSprite);
         return;
